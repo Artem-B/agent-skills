@@ -24,10 +24,12 @@ Findings from benchmark runs (mock CI and build logs, 120 runs, list prices):
 ## Install
 
 ```sh
-./install.sh
+npx skills add Artem-B/agent-skills -g -a claude-code codex
 ```
 
-This links each skill into `~/.agents/skills/` and `~/.claude/skills/`. Then add [`snippets/global-instructions.md`](snippets/global-instructions.md) to your global agent instructions (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`). That line is what makes agents reach for the skill reliably, and it tells Codex not to poll.
+This copies each skill into `~/.agents/skills/`, which Codex reads, and links it from `~/.claude/skills/`. To work on the skills, run `./install.sh` from a checkout instead. It links the same two locations to the checkout, so edits take effect immediately.
+
+Then add [`snippets/global-instructions.md`](snippets/global-instructions.md) to your global agent instructions (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`). That line is what makes agents reach for the skill reliably, and it tells Codex not to poll.
 
 ## License
 
