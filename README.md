@@ -12,7 +12,7 @@ Hands mechanical, token-heavy work to a cheap model in its own T3 thread: runnin
 - [`worker-prompt.md`](skills/offload-watch/worker-prompt.md): the worker prompt template.
 - [`scripts/offload`](skills/offload-watch/scripts/offload): a fallback for when T3 is unavailable. It runs the command, then has `claude -p` or `codex exec` write the report.
 
-Findings from benchmark runs (mock CI and build logs, 120 runs, list prices):
+Findings from benchmark runs (mock CI and build logs, 120 runs, list prices). The full analysis, with tables and charts, is on the wiki: [Offloading watch tasks to cheaper models](https://github.com/Artem-B/agent-skills/wiki/Offloading-watch-tasks-to-cheaper-models).
 
 - **Quality:** Haiku 5.5 and GPT-6-Luna matched Opus 5.5 and GPT-6.1-Sol on CI and build watching (quality 0.97–1.0). Luna was weaker on build-error cascades and session summaries.
 - **The heavy model's fixed cost per delegation dominates:**
