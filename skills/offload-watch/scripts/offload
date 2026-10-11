@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Run a command (or take a file), then have a quick model CLI report on its output.
+
+Fallback for offload-watch when T3 delegate_task is unavailable. The command runs here,
+in the caller's shell and sandbox; only the reading is offloaded.
+
+  offload [options] -- CMD [ARGS...]
+  offload [options] --file PATH
+
+Prints the report, then the paths of the saved output; exits with CMD's exit code.
+"""
+
+import argparse
+import shlex
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+MODELS = {"claude": "claude-haiku-5-5", "codex": "gpt-6-luna"}
+
+PROMPT = """Read {src}. {what}
+
+Report {report}. Leave out {noise}. Put the report first, one line per item, each naming where \
+(file:line, test id or CI step) and what went wrong. Then give the overall status (passed, failed or \
+incomplete){exit_note}.
+
+Work only with your own shell and file tools; write nothing. Every tool call re-sends your whole \
+context, so make few of them: analyze the file in one or two scripted passes (grep, awk or python) \
+that print only what you need. Don't page through it or print large chunks."""
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--via", choices=MODELS, default="claude", help="model CLI to use (default: claude)")
+    ap.add_argument("--model", help="override the quick model id")
+    ap.add_argument("--dir", help="where to save output (default: a new temp dir)")
+    ap.add_argument("--file", help="digest this file instead of running a command")
+    ap.add_argument("--report", default="every distinct problem a developer needs to act on",
+                    help="what the report must contain")
+    ap.add_argument("--noise", default="log chatter, progress lines and passing items",
+                    help="what to leave out")
+    ap.add_argument("cmd", nargs=argparse.REMAINDER, help="-- CMD [ARGS...]")
+    a = ap.parse_args()
+    cmd = a.cmd[1:] if a.cmd[:1] == ["--"] else a.cmd
+    if bool(cmd) == bool(a.file):
+        ap.error("give either -- CMD or --file")
+
+    out = Path(a.dir or tempfile.mkdtemp(prefix="offload-")).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    code = 0
+    if cmd:
+        log = out / "offload.log"
+        with open(log, "wb") as f:
+            code = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT).returncode
+        (out / "offload.exit").write_text(f"{code}\n")
+        src, what = log, f"It is the combined output of `{shlex.join(cmd)}`, which exited with code {code}."
+        exit_note = " and the exit code"
+    else:
+        src, what, exit_note = Path(a.file).resolve(), "", ""
+
+    prompt = PROMPT.format(src=src, what=what, report=a.report, noise=a.noise, exit_note=exit_note)
+    model = a.model or MODELS[a.via]
+    if a.via == "claude":
+        argv = ["claude", "-p", prompt, "--model", model, "--allowedTools", "Bash", "Read", "Grep",
+                "--add-dir", str(src.parent)]
+    else:
+        argv = ["codex", "exec", "-m", model, "-c", 'model_reasoning_effort="medium"', "-s", "read-only",
+                "--skip-git-repo-check", "-C", str(src.parent), "-o", str(out / "offload.report"), prompt]
+    r = subprocess.run(argv, capture_output=True, text=True, cwd=src.parent)
+    report = (out / "offload.report").read_text() if a.via == "codex" and r.returncode == 0 else r.stdout
+    if r.returncode != 0:
+        sys.stderr.write(f"offload: {a.via} exited {r.returncode}\n{r.stderr[-2000:]}\n")
+    print(report.strip())
+    print(f"\noutput: {src}" + (f" (exit {code})" if cmd else ""))
+    sys.exit(code if cmd else r.returncode)
+
+
+if __name__ == "__main__":
+    main()

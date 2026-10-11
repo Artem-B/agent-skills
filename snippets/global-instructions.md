@@ -1,0 +1,2 @@
+- Offload long-running or high-output mechanical work (CI runs, builds, test suites, large logs and transcripts) with the offload-watch skill.
+- Wait on a delegated T3 task with one blocking call (`delegate_task` `mode: "wait"`) or by ending your turn; T3 notifies you on completion. Check task status between other pieces of work, not in a loop.
