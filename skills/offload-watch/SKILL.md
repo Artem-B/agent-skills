@@ -7,7 +7,7 @@ description: Offload watching and digesting to a cheap model through T3 delegate
 
 A quick model in its own T3 thread runs the command, waits for it, reads the output, and hands back a short report. The raw output never enters your context. You pay for a delegate call and the report, not for every wait and every read.
 
-**When it pays:** from a session holding context C, offloading costs you 2–3 requests at C. Doing it yourself costs 4–8 requests at C, plus the output, which then stays in C for the rest of the session. For a command that finishes in under a minute with a few KB of output, run it yourself.
+**When it pays:** from a session holding context C, offloading costs you 2–3 requests at C. Doing it yourself costs 4–8 requests at C, plus the output, which then stays in C for the rest of the session. Waiting and reading both add requests, so judge by both: offload a long run, and also a short one whose output (a big test log, a cascade of build errors) takes more than one small scripted pass to digest. Run it yourself only when it finishes in under a minute and its output is a few KB.
 
 ## Steps
 
